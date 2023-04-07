@@ -5,22 +5,24 @@
 # ------------------------------------------------------------------------------
 # PREAMBLE
 # ------------------------------------------------------------------------------
-library(dplyr)
-library(Matrix)
-library(lme4)
-library(MASS)
-library(expm)
-library(ggplot2)
-library(latex2exp)
-library(reshape2)
-library(doParallel)
-library(polynom)
+# load packages
+pkgs <- c("dplyr", "Matrix", "lme4", "MASS", "expm", "ggplot2", "latex2exp", 
+          "reshape2", "doParallel", "polynom")
+for(pkg in pkgs){
+  if(!require(pkg, character.only = TRUE)) install.packages(pkg)
+  library(pkg, character.only = TRUE)
+}
 
-wdir <- "/Users/florianschwarb/Desktop/Master Thesis/Code"
-setwd(wdir)
+# setting the correct working directory
+if("florianschwarb" %in% Sys.info()){
+  wdir <- "/Users/florianschwarb/Desktop/Master-Thesis/Code/causalLMM/"
+} else{
+  wdir <- getwd()
+}
+setwd(paste0(wdir, "src"))
 
-source("fit_causalLMM.R")
-source("predict_causalLMM.R")
+source("fitcausalLMM.R")
+source("predictcausalLMM.R")
 
 # set seed
 set.seed(1)
