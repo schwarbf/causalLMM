@@ -40,7 +40,7 @@ runSim_simple <- function(nenv = 50, ne = 200){
   S_obs <- rnorm(nenv*ne)
   Z_obs <- rnorm(nenv*ne)
   H_obs <- etah_obs
-  X_obs <- S_obs + 2*H_v + etax_obs
+  X_obs <- S_obs + 2*H_obs + etax_obs
   Y_obs <- X_obs - 2*b_obs*Z_obs - 3*H_obs + eps_obs
   
   # shifted data
@@ -96,12 +96,14 @@ stopCluster(cl)
 summary <- data.frame(matrix(NA, ncol = 2, nrow = 3))
 colnames(summary) <- c('beta', 'mse')
 summary[3, 'mse'] <- mean(results[, 'mse'] %>% unlist() %>% as.vector())
-summary[3, 'beta'] <- temp/100
-
-temp <- 0
-for(i in 1:length(out)){
-  temp <- temp + out[[i]][2]
+tmp <- count <- 0
+for(i in 1:length(results)){
+  if(!is.na(results[[i]][2])) {
+    tmp <- tmp + results[[i]][2] %>% as.double()
+    count <- count + 1
+  }
 }
+summary[3, 'beta'] <- tmp/count
 
 
 # computing the quadratic through the 3 points using Lagrange polynomials
@@ -137,7 +139,7 @@ p_simple <- ggplot(data, aes(x = beta, y = mse)) +
   labs(title = 'Mean squared Error for shifted distribution')
 p_simple
 
-setwd("/Users/florianschwarb/Desktop/Master Thesis/Figures")
+setwd("/Users/florianschwarb/Desktop/Master-Thesis/Code/causalLMM/fig")
 ggsave('mse_a-simple-example.pdf', width = 5, height = 4)
 
 # ------------------------------------------------------------------------------
@@ -230,7 +232,7 @@ nsim <- 25
 nenv <- 50
 ne <- 200
 gamma <- 7
-strong_shifts <- FALSE
+strong_shifts <- T
 
 # initializing the cluster
 nCores <- detectCores()
@@ -272,29 +274,28 @@ quants$LMM <- 1/nsim*quants_LMM
 
 # Plotting
 if(strong_shifts){
-  subtitle <- 'Strong Shifts'
+  title <- 'Strong Shifts'
   filename <- 'empirical-analysis_strong-shifts.pdf'
 } else{
-  subtitle <- 'Moderate Shifts'
+  title <- 'Moderate Shifts'
   filename <- 'empirical-analysis_moderate-shifts.pdf'
 }
 quants <- melt(quants, id = 'alpha')
 p_strong <- ggplot(quants, aes(x = alpha, y = value, color = variable)) +
   geom_point(shape = 1) + 
-  theme(plot.title = element_text(face = 'bold'), 
-        panel.background = element_blank(), 
+  theme(panel.background = element_blank(), 
         panel.grid = element_blank(), 
-        panel.border = element_rect(colour = "black", fill =NA, size = 1), 
+        panel.border = element_rect(colour = "black", fill =NA, size = 0.5), 
         legend.key=element_blank(), 
-        legend.position = 'bottom') +
+        legend.position = "bottom", 
+        axis.title=element_text(size=8, face = "plain")) +
   scale_color_manual(values = c('red', 'blue')) +
   ylab('alpha-quantile of absolute prediction error') +
-  labs(title = 'Quantiles Test Error', 
-       subtitle = subtitle) +
+  labs(title = title) +
   guides(color = guide_legend(title = 'Legend'))
 p_strong
 
-setwd("/Users/florianschwarb/Desktop/Master Thesis/Figures")
+setwd("/Users/florianschwarb/Desktop/Master-Thesis/Code/causalLMM/fig")
 ggsave(filename, width = 5, height = 5)
 
 # Model Missspecifications - Random Slopes
@@ -348,21 +349,19 @@ quants$LMM <- 1/nsim*quants_LMM
 quants <- melt(quants, id = 'alpha')
 p_strong <- ggplot(quants, aes(x = alpha, y = value, color = variable)) +
   geom_point(shape = 1) + 
-  theme(plot.title = element_text(face = 'bold'), 
-        panel.background = element_blank(), 
+  theme(panel.background = element_blank(), 
         panel.grid = element_blank(), 
-        panel.border = element_rect(colour = "black", fill =NA, size = 1), 
+        panel.border = element_rect(colour = "black", fill =NA, size = 0.5), 
         legend.key=element_blank(), 
-        legend.position = 'bottom') +
+        legend.position = "bottom", 
+        axis.title=element_text(size=8, face = "plain")) +
   scale_color_manual(values = c('red', 'blue')) +
   ylab('alpha-quantile of absolute prediction error') +
-  labs(title = 'Quantiles Test Error', 
-       subtitle = 'Model Missspecifications - Random Slopes') +
   guides(color = guide_legend(title = 'Legend'))
 p_strong
 
-setwd("/Users/florianschwarb/Desktop/Master Thesis/Figures")
-ggsave('empirical-analysis_model-missspecifications', width = 5, height = 5)
+setwd("/Users/florianschwarb/Desktop/Master-Thesis/Code/causalLMM/fig")
+ggsave('empirical-analysis_model-missspecifications.pdf', width = 5, height = 5)
 
 # Effect of gamma
 # ------------------------------------------------------------------------------
@@ -427,24 +426,22 @@ quants_overall_melted <- melt(quants_overall, id = 'alpha')
 p_comp_gamma <- ggplot(quants_overall_melted, aes(x = alpha, y = value, 
                                                   color = variable, shape = variable)) +
   geom_point() + 
-  theme(plot.title = element_text(face = 'bold'), 
-        panel.background = element_blank(), 
+  theme(panel.background = element_blank(), 
         panel.grid = element_blank(), 
-        panel.border = element_rect(colour = "black", fill =NA, size = 1), 
+        panel.border = element_rect(colour = "black", fill =NA, size = 0.5), 
         legend.key=element_blank(), 
-        legend.position = 'bottom') +
+        legend.position = "bottom", 
+        axis.title=element_text(size=8, face = "plain")) +
   ylab('alpha-quantile of absolute prediction error') +
-  labs(title = 'Quantiles Test Error', 
-       subtitle = 'Comparison for different values of gamma') +
-  guides(color = guide_legend(title = 'Legend')) + 
-  scale_colour_manual(name = 'Legend', 
+  guides(color = guide_legend(title = 'gamma')) + 
+  scale_colour_manual(name = 'gamma', 
                       labels = c('0', '0.5', '1', '3', '7', '10', '16', 'LMM'), 
-                      values = c('yellow3', 'orange', 'mediumpurple1', 'purple4', 
-                                          'royalblue', 'blue', 'brown', 'red')) + 
-  scale_shape_manual(name = 'Legend', 
+                      values = c('yellow2', 'orange', 'mediumpurple1', 'green3', 
+                                 'royalblue', 'blue', 'cyan1', 'red')) + 
+  scale_shape_manual(name = 'gamma', 
                      labels = c('0', '0.5', '1', '3', '7', '10', '16', 'LMM'), 
                      values = c(1, 1, 1, 1, 1, 1, 1, 15))
 p_comp_gamma
 
-setwd("/Users/florianschwarb/Desktop/Master Thesis/Figures")
+setwd("/Users/florianschwarb/Desktop/Master-Thesis/Code/causalLMM/fig")
 ggsave('empirical-analysis_comparison-gamma.pdf', width = 5, height = 5)
