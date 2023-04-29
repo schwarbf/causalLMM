@@ -19,7 +19,9 @@ Note that `gamma` is the causal regularization parameter. It determines how "cau
 
 You can access the created figures in fig/. For example, the effect of `gamma`on the absolute prediction error is:
 
-![Effect of `gamma`](./fig/empirical-analysis_comparison-gamma.svg)
+<p align="center">  
+    <img src="./fig/empirical-analysis_comparison-gamma.svg" width=50% height=50%>
+</p>  
 
 ## Additional information
 
