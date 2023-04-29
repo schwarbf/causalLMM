@@ -1,5 +1,5 @@
 # ******************************************************************************
-#                                SIMULATIONS
+#                             A SIMPLE EXAMPLE
 # ******************************************************************************
 
 # ------------------------------------------------------------------------------
@@ -7,7 +7,7 @@
 # ------------------------------------------------------------------------------
 # load packages
 pkgs <- c("dplyr", "Matrix", "lme4", "MASS", "expm", "ggplot2", "latex2exp", 
-          "reshape2", "doParallel")
+          "reshape2", "doParallel", "polynom")
 for(pkg in pkgs){
   if(!require(pkg, character.only = TRUE)) install.packages(pkg)
   library(pkg, character.only = TRUE)
@@ -21,16 +21,133 @@ if("florianschwarb" %in% Sys.info()){
 }
 setwd(paste0(wdir, "src"))
 
-source("fit_causalLMM.R")
-source("predict_causalLMM.R")
+source("fitcausalLMM.R")
+source("predictcausalLMM.R")
 
 # set seed
 set.seed(1)
 
 # ------------------------------------------------------------------------------
-# HELPER FUNCTION
+# A SIMPLE EXAMPLE
 # ------------------------------------------------------------------------------
-runSim <- function(nenv = 10, ne = 200, gamma = 1, strong_shifts = F, random_slopes = F){
+# helper function to run the simulation
+runSim_simple <- function(nenv = 50, ne = 200){
+  # observational data
+  eps_obs <- rnorm(nenv*ne)
+  etax_obs <- rnorm(nenv*ne)
+  etah_obs <- rnorm(nenv*ne)
+  b_obs <- rnorm(nenv*1, sd = 0.5)
+  S_obs <- rnorm(nenv*ne)
+  Z_obs <- rnorm(nenv*ne)
+  H_obs <- etah_obs
+  X_obs <- S_obs + 2*H_obs + etax_obs
+  Y_obs <- X_obs - 2*b_obs*Z_obs - 3*H_obs + eps_obs
+  
+  # shifted data
+  eps_v <- rnorm(nenv*ne)
+  etax_v <- rnorm(nenv*ne)
+  etah_v <- rnorm(nenv*ne)
+  b_v <- rnorm(nenv*1, sd = 0.5)
+  Z_v <- rnorm(nenv*ne)
+  H_v <- etah_v
+  X_v <- 2 + 2*H_v + etax_v
+  Y_v <- X_v + 2*b_v*Z_v - 3*H_v + eps_v
+  
+  # computing LMM estimator using package lme4
+  ExpInd <- sapply(1:nenv, function(i){rep(i, ne)}) %>% as.vector()
+  data_obs <- data.frame(Y = Y_obs, X = X_obs, Z = Z_obs)
+  form <- Y ~ X + (Z | ExpInd)
+  lmer.fit <- lmer(form, data = data_obs, REML = F) %>% 
+    suppressMessages() %>%
+    suppressWarnings()
+  
+  # computing the mse (over all envs)
+  mse_env <- c()
+  for(env in 1:nenv){
+    ind <- which(ExpInd == env)
+    mse_env[env] <- mean((Y_v[ind] - X_v[ind]*fixef(lmer.fit)[2])^2)
+  }
+  mse <- mean(mse_env)
+  
+  return(list(mse = mse, beta = fixef(lmer.fit)))
+}
+
+# MSE for varying beta
+# ------------------------------------------------------------------------------
+# tuning parameters
+nsim <- 100
+nenv <- 50
+ne <- 200
+
+# initializing the cluster
+nCores <- detectCores()
+cl <- makeCluster(nCores - 1)
+clusterExport(cl, 'runSim_simple')
+
+# running simulation in parallel
+results <- foreach(sim = 1:nsim, .combine = rbind) %do% {
+    runSim_simple(nenv = nenv, ne = ne)
+}
+
+# shutting down cluster
+stopCluster(cl)
+
+# averaging
+summary <- data.frame(matrix(NA, ncol = 2, nrow = 3))
+colnames(summary) <- c('beta', 'mse')
+summary[3, 'mse'] <- mean(results[, 'mse'] %>% unlist() %>% as.vector())
+tmp <- count <- 0
+for(i in 1:length(results)){
+  if(!is.na(results[[i]][2])) {
+    tmp <- tmp + results[[i]][2] %>% as.double()
+    count <- count + 1
+  }
+}
+summary[3, 'beta'] <- tmp/count
+
+
+# computing the quadratic through the 3 points using Lagrange polynomials
+poly.calc(x = summary[, 'beta'], y = summary[, 'mse'])
+parabola <- function(x){
+  7.364637*x^2 - 4.70764*x + 8.332094
+}
+
+# plotting parabola through the 3 points
+ind_PA <- which(results[, 'gamma'] == 'PA-LMM')
+ind_LS <- which(results[, 'gamma'] == 'LS-LMM')
+ind_IV <- which(results[, 'gamma'] == 'IV-LMM')
+results <- results[, c('beta', 'mse')] %>% as.data.frame()
+add_on <- (results[ind_PA, 'beta'] - results[ind_IV, 'beta'])/1000*20
+beta <- seq(results[ind_PA, 'beta'] + add_on, results[ind_IV, 'beta'] - add_on, length.out = 1040)
+mse <- sapply(beta, parabola) %>% as.vector()
+data <- data.frame(beta = beta, mse = mse)
+p_simple <- ggplot(data, aes(x = beta, y = mse)) +
+  geom_line() + 
+  geom_point(aes(x = results[ind_PA, 'beta'], y = results[ind_PA, 'mse']), size = 3) +
+  annotate('text', x= results[ind_PA, 'beta'] - 4*add_on, y = results[ind_PA, 'mse'] + 0.3, label = 'PA-LMM') +
+  geom_point(aes(x = results[ind_IV, 'beta'], y = results[ind_IV, 'mse']), size = 3) +
+  annotate('text', x= results[ind_IV, 'beta'] + 4*add_on, y = results[ind_IV, 'mse'] + 0.3, label = 'IV-LMM') +
+  geom_point(aes(x = results[ind_LS, 'beta'], y = results[ind_LS, 'mse']), size = 3) +
+  annotate('text', x= results[ind_LS, 'beta'] - 4*add_on, y = results[ind_LS, 'mse'] + 0.3, label = 'LS-LMM') +
+  theme(plot.title = element_text(face = 'bold'), 
+        panel.background = element_blank(), 
+        panel.grid = element_blank(), 
+        panel.border = element_rect(colour = "black", fill =NA, size = 1), 
+        legend.position = 'none') +
+  ylab('MSE') +
+  xlab(TeX('$\\beta_{causalLMM}^{\\gamma}$')) +
+  labs(title = 'Mean squared Error for shifted distribution')
+p_simple
+
+setwd("/Users/florianschwarb/Desktop/Master-Thesis/Code/causalLMM/fig")
+ggsave('mse_a-simple-example.pdf', width = 5, height = 4)
+
+# ------------------------------------------------------------------------------
+# EMPIRICAL ANALYSIS
+# ------------------------------------------------------------------------------
+# helper function to run the simulation
+runSim_advanced <- function(nenv = 10, ne = 200, gamma = 1, strong_shifts = F, 
+                            random_slopes = F){
   # observational data
   eps_obs <- rnorm(nenv*ne)
   etax_obs <- mvrnorm(nenv*ne, mu = c(rep(0, 5)), Sigma = 0.5^2*diag(5))
@@ -108,10 +225,6 @@ runSim <- function(nenv = 10, ne = 200, gamma = 1, strong_shifts = F, random_slo
   }
 }
 
-# ------------------------------------------------------------------------------
-# EMPIRICAL ANALYSIS
-# ------------------------------------------------------------------------------
-
 # Moderate/Strong Shifts
 # ------------------------------------------------------------------------------
 # tuning parameters
@@ -124,11 +237,11 @@ strong_shifts <- T
 # initializing the cluster
 nCores <- detectCores()
 cl <- makeCluster(nCores - 1)
-clusterExport(cl, 'runSim')
+clusterExport(cl, 'runSim_advanced')
 
 # running simulation in parallel
 results <- foreach(sim = 1:nsim) %do% {
-  sim_out <- runSim(nenv = nenv, ne = ne, gamma = gamma, 
+  sim_out <- runSim_advanced(nenv = nenv, ne = ne, gamma = gamma, 
                              strong_shifts = strong_shifts) 
   
   # compute empirical quantiles of absolute prediction errors
@@ -197,11 +310,11 @@ strong_shifts <- TRUE
 # initializing the cluster
 nCores <- detectCores()
 cl <- makeCluster(nCores - 1)
-clusterExport(cl, 'runSim')
+clusterExport(cl, 'runSim_advanced')
 
 # running simulation in parallel
 results <- foreach(sim = 1:nsim) %do% {
-  sim_out <- runSim(nenv = nenv, ne = ne, gamma = gamma, 
+  sim_out <- runSim_advanced(nenv = nenv, ne = ne, gamma = gamma, 
                              strong_shifts = strong_shifts, random_slopes = T) 
   
   # compute empirical quantiles of absolute prediction errors
@@ -262,12 +375,12 @@ strong_shifts <- TRUE
 # initializing the cluster
 nCores <- detectCores()
 cl <- makeCluster(nCores - 1)
-clusterExport(cl, 'runSim')
+clusterExport(cl, 'runSim_advanced')
 
 # running simulation in parallel
 for(gamma in gammas){
   results <- foreach(sim = 1:nsim) %do% {
-    sim_out <- runSim(nenv = nenv, ne = ne, gamma = gamma, 
+    sim_out <- runSim_advanced(nenv = nenv, ne = ne, gamma = gamma, 
                                strong_shifts = strong_shifts) 
     
     # compute empirical quantiles of absolute prediction errors

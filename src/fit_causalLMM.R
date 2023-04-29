@@ -4,17 +4,16 @@
 #'    value of gamma which corresponds to the amount of causal regularization/
 #'    expected strength of shift perturbations.
 #'
-#' @param X         data.frame: Contains the fixed-effects predictor
-#' @param Y         vector: Contains the response value for all environments
-#' @param Z         data.frame: Contains the random-effects predictors 
-#' @param S         data.frame: Contains the shift variables.
-#' @param gamma     float: Causal regularization tuning parameter.
-#' @param ExpInd    vector: Contains the indicators for the environments
-#' @param tol       float: Specifies the convergence tolerance for when the 
-#'                  iterative procedure to compute the causalLMM estimator 
-#'                  should terminate. 
-#' @param verbose   boolean: If TRUE, then the alternating fitting steps for 
-#'                  estimating beta_causalLMM and Sigma_e are printed. 
+#' @param X data.frame: Contains the fixed-effects predictor
+#' @param Y vector: Contains the response value for all environments
+#' @param Z data.frame: Contains the random-effects predictors 
+#' @param S data.frame: Contains the shift variables.
+#' @param gamma float: Causal regularization tuning parameter.
+#' @param ExpInd vector: Contains the indicators for the environments
+#' @param tol float: Specifies the convergence tolerance for when the iterative 
+#'    procedure to compute the causalLMM estimator should terminate. 
+#' @param verbose boolean: If TRUE, then the alternating fitting steps for 
+#'    stimating beta_causalLMM and Sigma_e are printed. 
 #' 
 #' @return Returns the model fit consisting of a list with 2 elements: 
 #'    $fixed-effects: vector of estimated fixed-effects

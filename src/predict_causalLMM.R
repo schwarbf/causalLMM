@@ -5,15 +5,15 @@
 #'    fixed- and random effects. The random effects need to be estimated 
 #'    seperately within each environment. 
 #'
-#' @param fit       list: Contains 2 elements: $fixed_effects: vector of estimated
-#'                  fixed effects and $random_effects: data.frame of random
-#'                  effects predictors for all environments. 
-#' @param newdata   list: Contains 2 elements: $X data.frame of fixed-effects 
-#'                  predictors and $Z data.frame of random-effects predictors. 
+#' @param fit list: Contains 2 elements: $fixed_effects: vector of estimated 
+#'     fixed effects and $random_effects: data.frame of random effects predictors 
+#'     for all environments. 
+#' @param newdata list: Contains 2 elements: $X data.frame of fixed-effects 
+#'     predictors and $Z data.frame of random-effects predictors. 
 #' @param ExpInd    vector: Contains the indicators for the environments
 #' 
 #' @return vector: Predictions of response in each existing environment using
-#'   fixed- and random effects. 
+#'     fixed- and random effects. 
 
 predict_causalLMM <- function(fit, newdata, ExpInd){
   # extract tuning parameters
