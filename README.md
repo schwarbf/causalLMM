@@ -17,7 +17,9 @@ This will reproduce all experiments. In particular, the following analysis' will
 
 Note that `gamma` is the causal regularization parameter. It determines how "causal" our solution should be. See the thesis for more details. 
 
-You can access the created figures in figs/. 
+You can access the created figures in fig/. For example, the effect of `gamma`on the absolute prediction error is:
+
+![alt text](https://github.com/schwarbf/causalLMM/tree/master/fig/empirical-analysis_comparison-gamma.pdf?raw=true)
 
 ## Additional information
 
