@@ -1,4 +1,4 @@
-# causalLMM
+# causalLMM: Robust Prediction and Causal Identification for Linear Mixed-Effects Models
 This repository contains the code to reproduce the results from the second part of my master thesis. This is an extension of [Anchor Regression](https://academic.oup.com/jrsssb/article/83/2/215/7056043) to linear mixed-effects models. The `causalLMM` estimator protects against distribution shifts in the fixed-effects and hidden variables up to a certain size. 
 
 ## Reproducing experiments
